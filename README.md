@@ -19,6 +19,13 @@ right ? to move our hero to the right
 up ? to move our hero up
 down ? to move our hero down
 
+### To win the game
+- Use your keyborad arrow keys to move your character.
+- Guide your character to reach the other side ( The top most row ).
+- Avoid collision with bugs.
+- You lose if your character collides with any bug. If so he will return to starting position.
+
+
 ## Built With
 
 Languages:

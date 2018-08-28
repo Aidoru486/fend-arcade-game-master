@@ -1,247 +1,189 @@
-/*jshint esversion: 6 */
+// Global variables
+const columnWidth = 101;   // Single block width
+const rowHeight = 83;      // Single block height
+const bottomRow = 405;     // The bottom most row on canvas
 
-// IIFE call with global window object
-(function(global) {
-    'use strict';
 
-    // Escape global space by storing game in object
-    global.game = {};
+// Enemies constructor function
+const Enemy = function(y) {
+    // All enemies are free to move by default
+    this.freeToMove = true;
     
-    // Game content and logic
-    class Board {
-        constructor() {
-            this.TILE_WIDTH = 101;
-            this.TILE_HEIGHT = 83;
-            this.LEFT_WALL = 0;
-            this.RIGHT_WALL = 404;
-            this.TOP_WALL = 53;
-            this.BOTTOM_WALL = 385;
-            this.OFFSCREEN_TILE = this.LEFT_WALL - this.TILE_WIDTH;
-            this.heroStartTileX = this.TILE_WIDTH * 2;
-            this.heroStartTileY = this.TOP_WALL + (this.TILE_HEIGHT * 4);
-
-            // Enemy parameters
-            this.enemies = [
-                {
-                    x: this.OFFSCREEN_TILE,
-                    y: this.TOP_WALL
-                }, 
-                {
-                    x: this.OFFSCREEN_TILE,
-                    y: this.TOP_WALL + this.TILE_HEIGHT,
-                    speed: 400
-                }, 
-                {
-                    x: this.OFFSCREEN_TILE - (this.TILE_WIDTH * 1.5),
-                    y: this.TOP_WALL + this.TILE_HEIGHT,
-                    speed: 400
-                },
-                {
-                    x: this.OFFSCREEN_TILE - (this.TILE_WIDTH * 2),
-                    y: this.TOP_WALL + (this.TILE_HEIGHT * 2),
-                    speed: 150
-                }
-            ];
-
-            // Controls painting next animation frame
-            this.paintNextFrame = true;
-        }
-
-        initBoard() {
-            this.initEnemies();
-            this.initPlayer();
-            this.initKeys();
-        }
-
-        // Create instances of all enemies
-        initEnemies() {
-            game.allEnemies = [];
-            for (let i = 0; i <= 3; i++) {
-                const newEnemy = new Enemy(this.enemies[i].x, this.enemies[i].y, this.enemies[i].speed);
-                game.allEnemies.push(newEnemy);
-            }
-        }
-
-        // Create player instance
-        initPlayer() {
-            game.player = new Hero(this.heroStartTileX, this.heroStartTileY, 'images/char-boy.png');
-        }
- 
-        // This listens for key presses and sends the keys to your
-        // Player.handleInput() method. You don't need to modify this.
-        initKeys() {
-            document.addEventListener('keyup', function(e) {
-                var allowedKeys = {
-                    // Arrows
-                    37: 'left',
-                    38: 'up',
-                    39: 'right',
-                    40: 'down',
-
-                    // WASD
-                    65: 'left',
-                    87: 'up',
-                    68: 'right',
-                    83: 'down'
-                };
-                game.player.handleInput(allowedKeys[e.keyCode]);
-            });
-        } 
-
-        // Handle victory modal's on/off state
-       toggleVictoryModal() {
-            const modal = document.querySelector('.modal');
-            modal.classList.toggle('hide');
-        } 
-    }
-
-    /**
-     * Player character
-     * 
-     * @param  {int} x - x coord position
-     * @param  {int} y - y coord position
-     * @param  {string} sprite - Player sprite
-     */
-    class Hero {
-        constructor(x, y, sprite) {
-            this.startX = x;
-            this.startY = y;
-            this.x = this.startX;
-            this.y = this.startY;
-            this.sprite = sprite;
-        }
-
-        // Player position logic
-        update() {
-            checkCollision();
-            checkVictory();
-
-            // Checks if player collides with enemy
-            function checkCollision() {
-                game.allEnemies.forEach(enemy => {
-                    if (collision(enemy)) {
-                        game.player.resetHero();
-                    }
-                });
-
-                /**
-                 * Return boolean on whether a game.player and enemy collision occurred
-                 * 
-                 * @param  {object} enemy - Enemy object
-                 */
-                function collision(enemy) {
-                    const COLLISION_BUFFER = 2; // Reduce hitbox size
-                    const enemyLeft = enemy.x;
-                    const enemyRight = enemy.x + (game.board.TILE_WIDTH / COLLISION_BUFFER);
-                    const playerLeft = game.player.x;
-                    const playerRight = game.player.x + (game.board.TILE_WIDTH / COLLISION_BUFFER);
-                    return ((enemyRight > playerLeft &&
-                        enemyLeft < playerRight) &&
-                        (enemy.y === game.player.y));
-                }
-            }
-
-            // Check if player reached river
-            function checkVictory() {
-                if (victory()) {
-                    game.board.paintNextFrame = false;
-                }
-
-                // Check if player reached the water
-                function victory() {              
-                    if (game.player.y === game.board.TOP_WALL) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        // Render hero
-        render() {
-            ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-        }
+    // Enemy start position is 1 block before far left
+    this.x = -columnWidth;
     
-        /**
-         * Hero movement
-         * 
-         * @param  {string} key - String of direction to change
-         */
-        handleInput(key) {
-            switch (key) {
-                case 'left':
-                    if (this.x > game.board.LEFT_WALL) {
-                        this.x -= game.board.TILE_WIDTH;
-                    }
-                    break;
-                case 'right':
-                    if (this.x < game.board.RIGHT_WALL) {
-                        this.x += game.board.TILE_WIDTH;
-                    }
-                    break;
-                case 'up':
-                if (this.y > game.board.TOP_WALL) {
-                        this.y -= game.board.TILE_HEIGHT;
-                    }
-                    break;
-                case 'down':
-                    if (this.y < game.board.BOTTOM_WALL) {
-                        this.y += game.board.TILE_HEIGHT;
-                    }
-                    break;
-            }
-        }
+    // Enemy vertical position
+    this.y = y;
+    
+    // Assign enemy speed randomly
+    this.speed = 150 * (Math.floor(Math.random() * 5) + 1);
+    
+    // Enemy character image
+    this.sprite = 'images/enemy-bug.png';
+};
 
-        // Reset hero back to starting coords
-        resetHero() {
-            this.x = this.startX;
-            this.y = this.startY;
-        }
+
+// Update enemies objects
+Enemy.prototype.update = function(dt) {
+    
+    if (this.freeToMove) { // Move enemy only if it's free to move (not freezed)
+        this.x += dt * this.speed;
     }
-
-    /**
-     * Enemies our player must avoid
-     * 
-     * @param  {int} x - x coord position
-     * @param  {int} y - y coord position
-     * @param  {int} speed=200 - Movement speed
-     */
-    class Enemy {
-        constructor(x, y, speed = 200) {
-            this.x = x;
-            this.y = y;
-            this.speed = speed;
-            this.sprite = 'images/enemy-bug.png';
-
-            // Initial spawn location
-            this.startingX = x;
-            this.startingY = y;
-        }
-  
-        /**
-         * Enemy position logic
-         * 
-         * @param  {int} dt - DeltaTime for independent framerate 
-         */
-        update(dt) {
-            if (this.x < game.board.RIGHT_WALL - game.board.OFFSCREEN_TILE) {
-                // You should multiply any movement by the dt parameter
-                // which will ensure the game runs at the same speed for
-                // all computers.
-                this.x += this.speed * dt;
-            }
-            else {
-                this.x = game.board.OFFSCREEN_TILE;
-            }
-        } 
-     
-        // Draw the enemy on the screen, required method for game
-        render() {
-            ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-        } 
+    
+     // If enemy has reached far right, start again from the left and assign new random speed
+    if (this.x > (columnWidth * 8)) {
+        this.x = -columnWidth;
+        this.speed = 150 * (Math.floor(Math.random() * 5) + 1);;
     }
+    
+    // If an enemy and the player are too close
+    if (this.y === (player.y - 13)
+        && this.x > (player.x - 80)
+        && this.x < (player.x + 60)) {
+        // Freeze enemy
+        freeze(this);
+        
+        // Freeze player
+        freeze(player);
+        
+        // Show the "lose" message
+        message(lose);
+    }
+};
 
-    game.board = new Board();
-    game.board.initBoard();
 
-})(window);
+// Draw enemy on screen
+Enemy.prototype.render = function() {
+    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+};
 
+
+// Player constructor function
+const Player = function () {
+    // Player is free to move by default
+    this.freeToMove = true;
+    
+    // Start at 4th column
+    this.x = columnWidth * 3;
+    
+    // Start at bottom most row
+    this.y = bottomRow;
+    
+    // Player character image
+    this.sprite = 'images/char-boy.png';
+}
+
+
+// Update player object
+Player.prototype.update = function() {
+    // If player has reached the winning row successfully
+    if (this.y === -10) {
+        // Freeze player
+        freeze(this);
+        
+        // Show the "win" message
+        message(win);
+    }
+};
+
+
+// Draw player on screen
+Player.prototype.render = function() {
+    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+};
+
+
+// Move player character according to the pressed key
+Player.prototype.handleInput = function(direction) {
+    if (this.freeToMove) { // Only if the player is free to move (not freezed)
+        
+        if (direction === 'left') {
+            // Start from far right when player is at far left and the left key pressed
+            this.x === 0 ? this.x = (columnWidth * 6) : this.x -= columnWidth;
+            
+        } else if (direction === 'right') {
+            // Start from far left when player is at far right and the right key pressed
+            this.x === (columnWidth * 6) ? this.x = 0 : this.x += columnWidth;
+            
+        } else if (direction === 'up') {
+            // Move player one row up
+            this.y -= rowHeight;
+            
+        } else if (direction === 'down' && this.y !== bottomRow) {
+            // Move player one row down
+            this.y += rowHeight;
+        }  
+    }
+};
+
+
+// Generating new enemies
+const allEnemies = [
+    // Top track enemy
+    new Enemy(60),
+    
+    // middle track enemy
+    new Enemy(143),
+    
+    // bottom track enemy
+    new Enemy(226)
+];
+
+
+// Generate new player
+const player = new Player();
+
+
+// Listen to keyboard arrow keys strokes
+document.addEventListener('keyup', function(e) {
+    const allowedKeys = {
+        // left keyboard arrow key
+        37: 'left',
+        
+        // up keyboard arrow key
+        38: 'up',
+        
+        // right keyboard arrow key
+        39: 'right',
+        
+        // down keyboard arrow key
+        40: 'down'
+    };
+
+    player.handleInput(allowedKeys[e.keyCode]); 
+});
+
+
+// Freeze object for some time, then release
+function freeze(obj) {
+    // Freeze object
+    obj.freeToMove = false;
+    
+    setTimeout(function () {
+        // Release object
+        obj.freeToMove = true;
+        
+        if (obj === player) { // Reset player position after release
+            player.x = columnWidth * 3;
+            player.y = bottomRow;
+        };
+    }, 750);
+}
+
+
+// Show message according to state
+function message(state) {
+    // show message
+    state.style.display = 'inline-block';
+    
+    // Remove message with animation after some time
+    setTimeout(function() {
+        state.classList.add('zoomOutDown');
+        
+        // Hide message and remove animation class to use it again
+        setTimeout(function() {
+            state.classList.remove('zoomOutDown');
+            state.style.display = 'none';
+        }, 750)
+    }, 400)
+}
